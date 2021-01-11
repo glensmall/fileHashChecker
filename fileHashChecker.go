@@ -29,7 +29,10 @@ var cfg appConfig
 // Main Entrypoint for this application
 func main() {
 
-	parseCommandline()
+	// quit if this fails
+	if parseCommandline() > 0 {
+		return
+	}
 
 	computeSingleHash()
 
@@ -48,7 +51,7 @@ func main() {
 
  */
 
-func parseCommandline() {
+func parseCommandline() int {
 
 	// define the flags to start with
 	hashPTR := flag.String("hash", "SHA256", "The hash we want to use")
@@ -69,7 +72,27 @@ func parseCommandline() {
 	cfg.recursive = *recursivePTR
 	cfg.savefile = *outfilePTR
 
-	fmt.Println("filename=", *filenamePTR, "hash=", cfg.hashType)
+	// we need at leats a filename or folder
+	if cfg.filename == "" && cfg.folder == "" {
+		printUsage()
+		return (1)
+	}
+
+	return (0)
+}
+
+// prints the usage syntax
+func printUsage() {
+
+	fmt.Println("USAGE:  fileHackChecker -filename | -folder <OPTIONS>")
+	fmt.Println("")
+	fmt.Println("Flags:")
+	fmt.Println("\t-filename\tThe name of the file we want to hash")
+	fmt.Println("\t-folder\t\tThe name of the folder we want to iterate and hash files in")
+	fmt.Println("\t-hash\t\tThe hash to use - SHA1, SHA256, SHA512, MD5  (Default SHA256)")
+	fmt.Println("\t-recursive\tIf folder is specified, this tells the app to decend into sub folders")
+	fmt.Println("\t-fileoutput\tRedirects output to a file rather than the console")
+	fmt.Println("\t-outfile\tfilename to redirect output to")
 
 }
 
