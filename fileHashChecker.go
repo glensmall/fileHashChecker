@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"flag"
+	"fmt"
 	"hash"
 	"io"
 	"os"
@@ -13,61 +15,101 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+type appConfig struct {
+	hashType   string
+	filename   string
+	folder     string
+	recursive  bool
+	savefile   string
+	fileoutput bool
+}
+
+var cfg appConfig
+
 // Main Entrypoint for this application
 func main() {
 
-	inputFile := os.Args[1]
+	parseCommandline()
 
-	computeSingleHash(inputFile, "SHA256")
-	computeSingleHash(inputFile, "SHA512")
-	computeSingleHash(inputFile, "SHA1")
-	computeSingleHash(inputFile, "MD5")
+	computeSingleHash()
 
-	return
+	/*
+		inputFile := os.Args[1]
+
+		computeSingleHash(inputFile, "SHA256")
+		computeSingleHash(inputFile, "SHA512")
+		computeSingleHash(inputFile, "SHA1")
+		computeSingleHash(inputFile, "MD5")
+	*/
+}
+
+// Can use this to redner output to a table
+/*
+
+ */
+
+func parseCommandline() {
+
+	// define the flags to start with
+	hashPTR := flag.String("hash", "SHA256", "The hash we want to use")
+	filenamePTR := flag.String("filename", "", "The file we want to hash")
+	folderPTR := flag.String("folder", "", "The fodler we want to iterate through")
+	outfilePTR := flag.String("outfile", "", "The file we want to save all the hashs to")
+	recursivePTR := flag.Bool("recursive", false, "Do we want to decend the whole folder")
+	fileoutputPTR := flag.Bool("fileoutput", false, "Do we want to save to a file or render to the screen")
+
+	// parse the arges and mapp them
+	flag.Parse()
+
+	// now assign the values to our struct for later use
+	cfg.hashType = *hashPTR
+	cfg.filename = *filenamePTR
+	cfg.folder = *folderPTR
+	cfg.fileoutput = *fileoutputPTR
+	cfg.recursive = *recursivePTR
+	cfg.savefile = *outfilePTR
+
+	fmt.Println("filename=", *filenamePTR, "hash=", cfg.hashType)
+
 }
 
 // function to compute a single hash and return it
-func computeSingleHash(inputFile string, hashType string) {
+func computeSingleHash() {
 
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Filename", "Hash", "Hash Type"})
+	var computedHash string
 
-	if hashType == "SHA256" {
+	if cfg.hashType == "SHA256" {
 		h := sha256.New()
-		computedHash := computeHash(inputFile, h)
+		computedHash = computeHash(cfg.filename, h)
 
-		t.AppendRows([]table.Row{
-			{inputFile, computedHash, "SHA256"},
-		})
-
-	} else if hashType == "SHA512" {
+	} else if cfg.hashType == "SHA512" {
 		h := sha512.New()
-		computedHash := computeHash(inputFile, h)
+		computedHash = computeHash(cfg.filename, h)
 
-		t.AppendRows([]table.Row{
-			{inputFile, computedHash, "SHA512"},
-		})
-	} else if hashType == "SHA1" {
+	} else if cfg.hashType == "SHA1" {
 		h := sha1.New()
-		computedHash := computeHash(inputFile, h)
+		computedHash = computeHash(cfg.filename, h)
 
-		t.AppendRows([]table.Row{
-			{inputFile, computedHash, "SHA1"},
-		})
-	} else if hashType == "MD5" {
+	} else if cfg.hashType == "MD5" {
 		h := md5.New()
-		computedHash := computeHash(inputFile, h)
-
-		t.AppendRows([]table.Row{
-			{inputFile, computedHash, "MD5"},
-		})
+		computedHash = computeHash(cfg.filename, h)
 	}
 
-	t.AppendSeparator()
-	t.Render()
+	// now we need to see how the output was specifed and deal with that
+	if cfg.fileoutput {
+		// save this to a file
+	} else {
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"Filename", "Hash", "Hash Type"})
 
-	return
+		t.AppendRows([]table.Row{
+			{cfg.filename, computedHash, cfg.hashType},
+		})
+
+		t.AppendSeparator()
+		t.Render()
+	}
 }
 
 // function to compute a hash based on the specified file
