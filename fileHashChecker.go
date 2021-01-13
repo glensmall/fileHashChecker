@@ -89,11 +89,11 @@ func printUsage() {
 	fmt.Println("\t-hash\t\tThe hash to use - SHA1, SHA256, SHA512, MD5  (Default SHA256)")
 	fmt.Println("\t-compare\ttrue id you want to compare the computed hash against a specifed hash")
 	fmt.Println("\t-hashcompare\tThe string of the hash you want to compare against")
-	fmt.Println("\n\nEXAMPLE:\n\n")
+	fmt.Println("\n\nEXAMPLE:\n")
 	fmt.Println("To hash a file using SHA256 and print the compated Hash to the screen")
-	fmt.Println("fileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\"\n\n")
+	fmt.Println("\tfileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\"\n\n")
 	fmt.Println("To compute the hash of a selected file and compare it to a specified hash")
-	fmt.Println("fileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\" -compare=\"true\" -hashcompare=\"FGHJKWETYU345FGH67\"\n\n")
+	fmt.Println("\tfileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\" -compare=\"true\" -hashcompare=\"FGHJKWETYU345FGH67\"\n\n")
 
 }
 
