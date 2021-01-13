@@ -12,16 +12,15 @@ import (
 	"io"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 type appConfig struct {
-	hashType   string
-	filename   string
-	folder     string
-	recursive  bool
-	savefile   string
-	fileoutput bool
+	hashType    string
+	filename    string
+	compare     bool
+	compareHash string
 }
 
 var cfg appConfig
@@ -34,16 +33,13 @@ func main() {
 		return
 	}
 
-	computeSingleHash()
+	// now determine how to proceed
+	if cfg.compare {
+		compareHashStrings()
+	} else {
+		computeSingleHash()
+	}
 
-	/*
-		inputFile := os.Args[1]
-
-		computeSingleHash(inputFile, "SHA256")
-		computeSingleHash(inputFile, "SHA512")
-		computeSingleHash(inputFile, "SHA1")
-		computeSingleHash(inputFile, "MD5")
-	*/
 }
 
 // Can use this to redner output to a table
@@ -56,10 +52,8 @@ func parseCommandline() int {
 	// define the flags to start with
 	hashPTR := flag.String("hash", "SHA256", "The hash we want to use")
 	filenamePTR := flag.String("filename", "", "The file we want to hash")
-	folderPTR := flag.String("folder", "", "The fodler we want to iterate through")
-	outfilePTR := flag.String("outfile", "", "The file we want to save all the hashs to")
-	recursivePTR := flag.Bool("recursive", false, "Do we want to decend the whole folder")
-	fileoutputPTR := flag.Bool("fileoutput", false, "Do we want to save to a file or render to the screen")
+	hashComparePTR := flag.String("hashcompare", "", "The ahsh we want to compare")
+	comparePTR := flag.Bool("compare", false, "Are we comparing a file to a hash")
 
 	// parse the arges and mapp them
 	flag.Parse()
@@ -67,13 +61,17 @@ func parseCommandline() int {
 	// now assign the values to our struct for later use
 	cfg.hashType = *hashPTR
 	cfg.filename = *filenamePTR
-	cfg.folder = *folderPTR
-	cfg.fileoutput = *fileoutputPTR
-	cfg.recursive = *recursivePTR
-	cfg.savefile = *outfilePTR
+	cfg.compareHash = *hashComparePTR
+	cfg.compare = *comparePTR
 
-	// we need at leats a filename or folder
-	if cfg.filename == "" && cfg.folder == "" {
+	// we need at leats a filename to continue
+	if cfg.filename == "" {
+		printUsage()
+		return (1)
+	}
+
+	// if we are comparing, do we have a hash to compare
+	if cfg.compare && cfg.compareHash == "" {
 		printUsage()
 		return (1)
 	}
@@ -84,16 +82,65 @@ func parseCommandline() int {
 // prints the usage syntax
 func printUsage() {
 
-	fmt.Println("USAGE:  fileHackChecker -filename | -folder <OPTIONS>")
+	fmt.Println("USAGE:  fileHackChecker -filename <OPTIONS>")
 	fmt.Println("")
 	fmt.Println("Flags:")
 	fmt.Println("\t-filename\tThe name of the file we want to hash")
-	fmt.Println("\t-folder\t\tThe name of the folder we want to iterate and hash files in")
 	fmt.Println("\t-hash\t\tThe hash to use - SHA1, SHA256, SHA512, MD5  (Default SHA256)")
-	fmt.Println("\t-recursive\tIf folder is specified, this tells the app to decend into sub folders")
-	fmt.Println("\t-fileoutput\tRedirects output to a file rather than the console")
-	fmt.Println("\t-outfile\tfilename to redirect output to")
+	fmt.Println("\t-compare\ttrue id you want to compare the computed hash against a specifed hash")
+	fmt.Println("\t-hashcompare\tThe string of the hash you want to compare against")
+	fmt.Println("\n\nEXAMPLE:\n\n")
+	fmt.Println("To hash a file using SHA256 and print the compated Hash to the screen")
+	fmt.Println("fileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\"\n\n")
+	fmt.Println("To compute the hash of a selected file and compare it to a specified hash")
+	fmt.Println("fileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\" -compare=\"true\" -hashcompare=\"FGHJKWETYU345FGH67\"\n\n")
 
+}
+
+func compareHashStrings() {
+	var computedHash string
+
+	if cfg.hashType == "SHA256" {
+		h := sha256.New()
+		computedHash = computeHash(cfg.filename, h)
+
+	} else if cfg.hashType == "SHA512" {
+		h := sha512.New()
+		computedHash = computeHash(cfg.filename, h)
+
+	} else if cfg.hashType == "SHA1" {
+		h := sha1.New()
+		computedHash = computeHash(cfg.filename, h)
+
+	} else if cfg.hashType == "MD5" {
+		h := md5.New()
+		computedHash = computeHash(cfg.filename, h)
+	}
+
+	// now we need to see how the output was specifed and deal with that
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Filename", "Computed Hash", "Result"})
+
+	if computedHash == cfg.compareHash {
+
+		result := color.New(color.FgHiGreen).SprintfFunc()
+		t.AppendRows([]table.Row{
+			{cfg.filename, computedHash, result("OK")},
+		})
+
+	} else {
+
+		result := color.New(color.FgHiRed).SprintfFunc()
+		t.AppendRows([]table.Row{
+			{cfg.filename, computedHash, result("ERROR")},
+		})
+
+	}
+
+	t.AppendSeparator()
+	t.Render()
 }
 
 // function to compute a single hash and return it
@@ -119,20 +166,18 @@ func computeSingleHash() {
 	}
 
 	// now we need to see how the output was specifed and deal with that
-	if cfg.fileoutput {
-		// save this to a file
-	} else {
-		t := table.NewWriter()
-		t.SetOutputMirror(os.Stdout)
-		t.AppendHeader(table.Row{"Filename", "Hash", "Hash Type"})
 
-		t.AppendRows([]table.Row{
-			{cfg.filename, computedHash, cfg.hashType},
-		})
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Filename", "Hash", "Hash Type"})
 
-		t.AppendSeparator()
-		t.Render()
-	}
+	t.AppendRows([]table.Row{
+		{cfg.filename, computedHash, cfg.hashType},
+	})
+
+	t.AppendSeparator()
+	t.Render()
+
 }
 
 // function to compute a hash based on the specified file
