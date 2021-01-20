@@ -17,10 +17,9 @@ import (
 )
 
 type appConfig struct {
-	hashType    string
-	filename    string
-	compare     bool
-	compareHash string
+	hashType string
+	filename string
+	compare  string
 }
 
 var cfg appConfig
@@ -34,10 +33,10 @@ func main() {
 	}
 
 	// now determine how to proceed
-	if cfg.compare {
-		compareHashStrings()
-	} else {
+	if len(cfg.compare) == 0 {
 		computeSingleHash()
+	} else {
+		compareHashStrings()
 	}
 
 }
@@ -52,28 +51,27 @@ func parseCommandline() int {
 	// define the flags to start with
 	hashPTR := flag.String("hash", "SHA256", "The hash we want to use")
 	filenamePTR := flag.String("filename", "", "The file we want to hash")
-	hashComparePTR := flag.String("hashcompare", "", "The ahsh we want to compare")
-	comparePTR := flag.Bool("compare", false, "Are we comparing a file to a hash")
+	comparePTR := flag.String("compare", "", "The hash we want to compare")
 
 	// parse the arges and mapp them
 	flag.Parse()
 
 	// now assign the values to our struct for later use
-	cfg.hashType = *hashPTR
-	cfg.filename = *filenamePTR
-	cfg.compareHash = *hashComparePTR
-	cfg.compare = *comparePTR
-
-	// we need at leats a filename to continue
-	if cfg.filename == "" {
-		printUsage()
-		return (1)
+	if len(*hashPTR) == 0 {
+		cfg.hashType = "SHA256"
+	} else {
+		cfg.hashType = *hashPTR
 	}
 
-	// if we are comparing, do we have a hash to compare
-	if cfg.compare && cfg.compareHash == "" {
+	if len(*filenamePTR) == 0 {
 		printUsage()
 		return (1)
+	} else {
+		cfg.filename = *filenamePTR
+	}
+
+	if len(*comparePTR) > 0 {
+		cfg.compare = *comparePTR
 	}
 
 	return (0)
@@ -87,13 +85,12 @@ func printUsage() {
 	fmt.Println("Flags:")
 	fmt.Println("\t-filename\tThe name of the file we want to hash")
 	fmt.Println("\t-hash\t\tThe hash to use - SHA1, SHA256, SHA512, MD5  (Default SHA256)")
-	fmt.Println("\t-compare\ttrue id you want to compare the computed hash against a specifed hash")
-	fmt.Println("\t-hashcompare\tThe string of the hash you want to compare against")
+	fmt.Println("\t-compare\tThe string of the hash you want to compare against")
 	fmt.Print("\n\nEXAMPLE:\n\n")
 	fmt.Println("To hash a file using SHA256 and print the compated Hash to the screen")
 	fmt.Print("\tfileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\"\n\n\n")
 	fmt.Println("To compute the hash of a selected file and compare it to a specified hash")
-	fmt.Print("\tfileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\" -compare=\"true\" -hashcompare=\"FGHJKWETYU345FGH67\"\n\n\n")
+	fmt.Print("\tfileHashChecker -filename=\"myfile.exe\" -hash=\"SHA256\" -compare=\"FGHJKWETYU345FGH67\"\n\n\n")
 
 }
 
@@ -123,7 +120,7 @@ func compareHashStrings() {
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Filename", "Computed Hash", "Result"})
 
-	if computedHash == cfg.compareHash {
+	if computedHash == cfg.compare {
 
 		result := color.New(color.FgHiGreen).SprintfFunc()
 		t.AppendRows([]table.Row{
